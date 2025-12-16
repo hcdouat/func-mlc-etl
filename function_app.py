@@ -11,7 +11,7 @@ app = func.FunctionApp()
 
 @app.function_name(name="mytimer")
 @app.timer_trigger(
-    schedule="0 */5 * * * *",  # every 5 minutes
+    schedule="0 */5 * * * *",
     arg_name="mytimer",
     run_on_startup=False,
 )
@@ -23,5 +23,6 @@ def test_function(mytimer: func.TimerRequest) -> None:
 
     logging.info("Timer ran at %s", utc_timestamp)
     logging.info("psycopg installed: %s", psycopg is not None)
+
     if psycopg is not None:
-        logging.info("psycopg version: %s", psycopg.__version__)
+        logging.info("psycopg version: %s", getattr(psycopg, "__version__", "unknown"))
