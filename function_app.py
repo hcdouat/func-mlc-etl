@@ -15,7 +15,7 @@ except ImportError:
 app = func.FunctionApp()
 
 @app.function_name(name="mytimer")
-@app.timer_trigger(schedule="0 */15 8-11,13-16 * * 1-5",
+@app.timer_trigger(schedule="0 */15 11,14-19 * * 1-5",
               arg_name="mytimer",
               run_on_startup=False)
 def sync_crm_to_postgres(mytimer: func.TimerRequest) -> None:
@@ -39,6 +39,7 @@ def sync_crm_to_postgres(mytimer: func.TimerRequest) -> None:
                             "limit": 200,
                             "token": os.getenv("CRM_TOKEN")
                         }).json()
+                        print(f"Fetched {len(data['deals'])} deals")
                         deals.extend(data["deals"])
                         if not data["has_more"]:
                             break
@@ -46,7 +47,7 @@ def sync_crm_to_postgres(mytimer: func.TimerRequest) -> None:
                     except Exception as e:
                         raise Exception(f"Failed to fetch deals on page {page} with params {params}") from e
 
-            fetch_deals({"win": None})
+            fetch_deals({"win": "null"})
             fetch_deals({
                 "win": True,
                 "closed_at_period": True,
@@ -67,7 +68,8 @@ def sync_crm_to_postgres(mytimer: func.TimerRequest) -> None:
             "funil": stage_to_funnel_name[deal["deal_stage"]["id"]],
             "ordem_funil": stage_to_funnel_order[deal["deal_stage"]["id"]],
             "estagio": deal["deal_stage"]["name"],
-            "ordem_estagio": stage_to_stage_order[deal["deal_stage"]["id"]]
+            "ordem_estagio": stage_to_stage_order[deal["deal_stage"]["id"]],
+            "data_fechamento": deal["closed_at"]
         } for deal in deals]
 
     try:
@@ -89,12 +91,12 @@ def sync_crm_to_postgres(mytimer: func.TimerRequest) -> None:
                 
                 insert_sql = """
                     INSERT INTO "comercial"."negociacoes" 
-                    (crm_id, criada_em, valor_recorrente, valor_nao_recorrente, previsao_fechamento, status, funil, ordem_funil, estagio, ordem_estagio)
-                    VALUES (%(crm_id)s, %(criada_em)s, %(valor_recorrente)s, %(valor_nao_recorrente)s, %(previsao_fechamento)s, %(status)s, %(funil)s, %(ordem_funil)s, %(estagio)s, %(ordem_estagio)s)
+                    (crm_id, criada_em, valor_recorrente, valor_nao_recorrente, previsao_fechamento, status, funil, ordem_funil, estagio, ordem_estagio, data_fechamento)
+                    VALUES (%(crm_id)s, %(criada_em)s, %(valor_recorrente)s, %(valor_nao_recorrente)s, %(previsao_fechamento)s, %(status)s, %(funil)s, %(ordem_funil)s, %(estagio)s, %(ordem_estagio)s, %(data_fechamento)s)
                 """
                 update_sql = """
                     UPDATE "comercial"."negociacoes"
-                    SET criada_em = %(criada_em)s, valor_recorrente = %(valor_recorrente)s, valor_nao_recorrente = %(valor_nao_recorrente)s, previsao_fechamento = %(previsao_fechamento)s, status = %(status)s, funil = %(funil)s, ordem_funil = %(ordem_funil)s, estagio = %(estagio)s, ordem_estagio = %(ordem_estagio)s
+                    SET criada_em = %(criada_em)s, valor_recorrente = %(valor_recorrente)s, valor_nao_recorrente = %(valor_nao_recorrente)s, previsao_fechamento = %(previsao_fechamento)s, status = %(status)s, funil = %(funil)s, ordem_funil = %(ordem_funil)s, estagio = %(estagio)s, ordem_estagio = %(ordem_estagio)s, data_fechamento = %(data_fechamento)s
                     WHERE crm_id = %(crm_id)s
                 """
                 delete_sql = 'DELETE FROM "comercial"."negociacoes" WHERE crm_id = %(crm_id)s'
