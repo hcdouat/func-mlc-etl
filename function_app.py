@@ -49,8 +49,8 @@ def sync_crm_to_postgres(mytimer: func.TimerRequest) -> None:
 
             fetch_deals({"win": "null"})
             fetch_deals({
-                "win": True,
-                "closed_at_period": True,
+                "win": "true",
+                "closed_at_period": "true",
                 "start_date": (datetime.now() - relativedelta(months=11)).replace(day=1).strftime("%Y-%m-%dT00:00:00"),
             })
 
